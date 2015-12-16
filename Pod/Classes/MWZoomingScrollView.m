@@ -15,13 +15,14 @@
 #import "UIImage+MWPhotoBrowser.h"
 
 // Private methods and properties
-@interface MWZoomingScrollView () {
+@interface MWZoomingScrollView () <UIActionSheetDelegate>{
     
     MWPhotoBrowser __weak *_photoBrowser;
 	MWTapDetectingView *_tapView; // for background taps
 	MWTapDetectingImageView *_photoImageView;
 	DACircularProgressView *_loadingIndicator;
     UIImageView *_loadingError;
+    MBProgressHUD *_progressHUD;
     
 }
 
@@ -73,6 +74,8 @@
 		self.decelerationRate = UIScrollViewDecelerationRateFast;
 		self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         
+        UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressed:)];
+        [self addGestureRecognizer:longPress];
     }
     return self;
 }
@@ -409,6 +412,17 @@
 	
 }
 
+- (void)handleLongPressed:(UILongPressGestureRecognizer *)sender {
+    if (sender.state == UIGestureRecognizerStateBegan) {
+        UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:nil
+                                                                 delegate:self
+                                                        cancelButtonTitle:@"取消"
+                                                   destructiveButtonTitle:nil
+                                                        otherButtonTitles:@"保存到相册", nil];
+        [actionSheet showInView:self];
+    }
+}
+
 // Image View
 - (void)imageView:(UIImageView *)imageView singleTapDetected:(UITouch *)touch { 
     [self handleSingleTap:[touch locationInView:imageView]];
@@ -437,6 +451,55 @@
     touchX += self.contentOffset.x;
     touchY += self.contentOffset.y;
     [self handleDoubleTap:CGPointMake(touchX, touchY)];
+}
+
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 0) {
+        UIImageWriteToSavedPhotosAlbum([_photoBrowser imageForPhoto:_photo],
+                                       self,
+                                       @selector(image:didFinishSavingWithError:contextInfo:),
+                                       NULL);
+    }
+}
+
+- (void)image:(UIImage *)image didFinishSavingWithError:(NSError *)error contextInfo:(void *)contextInfo {
+    if (error) {
+        [self showTextHUDWithMessage:@"保存失败"];
+    } else {
+        [self showTextHUDWithMessage:@"保存成功"];
+    }
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self hideProgressHUD:YES];
+    });
+}
+
+- (MBProgressHUD *)progressHUD {
+    if (!_progressHUD) {
+        _progressHUD = [[MBProgressHUD alloc] initWithView:self];
+        _progressHUD.minSize = CGSizeMake(120, 120);
+        _progressHUD.minShowTime = 1;
+        [self addSubview:_progressHUD];
+    }
+    return _progressHUD;
+}
+
+- (void)showProgressHUDWithMessage:(NSString *)message {
+    self.progressHUD.labelText = message;
+    self.progressHUD.mode = MBProgressHUDModeIndeterminate;
+    [self.progressHUD show:YES];
+}
+
+- (void)showTextHUDWithMessage:(NSString *)message {
+    self.progressHUD.labelText = message;
+    self.progressHUD.mode = MBProgressHUDModeText;
+    [self.progressHUD show:YES];
+}
+
+- (void)hideProgressHUD:(BOOL)animated {
+    [self.progressHUD hide:animated];
 }
 
 @end

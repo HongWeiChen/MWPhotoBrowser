@@ -265,14 +265,7 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     } else {
         // We're not showing the toolbar so try and show in top right
         if (_actionButton) {
-#pragma mark -
-#pragma mark 需求
-#pragma mark -
-            UIBarButtonItem *shareButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
-                                                                                        target:self
-                                                                                        action:@selector(shareButtonPressed:)];
-            
-            self.navigationItem.rightBarButtonItems = @[_actionButton,shareButton];
+            self.navigationItem.rightBarButtonItem = _actionButton;
         }
         [items addObject:fixedSpace];
     }
@@ -1653,29 +1646,4 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     }
     self.navigationController.navigationBar.userInteractionEnabled = YES;
 }
-
-#pragma mark -
-#pragma mark 需求Action
-- (void)shareButtonPressed:(id)sender
-{
-    MWPhoto *photo = [self photoAtIndex:_currentPageIndex];
-    UIImageWriteToSavedPhotosAlbum([self imageForPhoto:photo],
-                                   self,
-                                   @selector(image:didFinishSavingWithError:contextInfo:),
-                                   NULL);
-}
-
-- (void)image:(UIImage *)image didFinishSavingWithError:(NSError *)error contextInfo:(void *)contextInfo {
-    if (error) {
-        [self showTextHUDWithMessage:@"保存失败"];
-    } else {
-        [self showTextHUDWithMessage:@"保存成功"];
-    }
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self hideProgressHUD:YES];
-    });
-}
-#pragma mark -
-
 @end
